@@ -62,8 +62,11 @@ export function useInstantSearchApi<TUiState extends UiState, TRouteState>(
 
   const store = useSyncExternalStore<InstantSearch<TUiState, TRouteState>>(
     useCallback(() => {
-      search.start();
-      forceUpdate();
+      // On SSR, the instance is already started so we don't start it again here.
+      if (!search.started) {
+        search.start();
+        forceUpdate();
+      }
 
       return () => {
         search.dispose();
@@ -73,13 +76,19 @@ export function useInstantSearchApi<TUiState extends UiState, TRouteState>(
     () => search
   );
 
-  if (serverContext && !search.started) {
+  if (!search.started) {
     // On the server, we start the search early to compute the search parameters.
-    search.start();
+    // On SSR, we start the search early to directly catch up with the lifecycle
+    // and render.
+    if (serverContext || serverState?.initialResults) {
+      search.start();
+    }
 
-    // We notify `getServerState()` of the InstantSearch internals to retrieve
-    // the server state and pass it to the render on SSR.
-    serverContext.notifyServer({ search });
+    if (serverContext) {
+      // We notify `getServerState()` of the InstantSearch internals to retrieve
+      // the server state and pass it to the render on SSR.
+      serverContext.notifyServer({ search });
+    }
   }
 
   return store;

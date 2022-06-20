@@ -20,6 +20,25 @@ aliases:
     name: Install dependencies
     command: yarn install
 
+  - &add_retry_command
+    name: Add retry command
+    command: |
+      retry() {
+        MAX_RETRY=2
+        n=0
+        until [ $n -ge $MAX_RETRY ]
+        do
+            "$@" && break
+            n=$[$n+1]
+        done
+        if [ $n -ge $MAX_RETRY ]; then
+          exit 1
+        fi
+      }
+
+      # https://github.com/facebook/jest/issues/8987 - Jest fails to run tests on CI sporadically
+      # retry introduced in https://github.com/algolia/react-instantsearch/pull/3475
+
 defaults: &defaults
   working_directory: ~/react-instantsearch
   docker:
@@ -72,25 +91,10 @@ jobs:
       - run:
           name: Type checking
           command: yarn type-check
+      - run: *add_retry_command
       - run:
           name: Unit Tests
-          command: |
-            retry() {
-              MAX_RETRY=2
-              n=0
-              until [ $n -ge $MAX_RETRY ]
-              do
-                  "$@" && break
-                  n=$[$n+1]
-              done
-              if [ $n -ge $MAX_RETRY ]; then
-                exit 1
-              fi
-            }
-
-            # https://github.com/facebook/jest/issues/8987 - Jest fails to run tests on CI sporadically
-            # retry introduced in https://github.com/algolia/react-instantsearch/pull/3475
-            retry yarn test --maxWorkers=4
+          command: retry yarn test --maxWorkers=4
 
   test_unit_react_v17:
     <<: *defaults
@@ -111,25 +115,10 @@ jobs:
               react-test-renderer@17.0.2 \
               @types/react-test-renderer@17.0.2 \
               @testing-library/react@12.1.4
+      - run: *add_retry_command
       - run:
           name: Unit Tests
-          command: |
-            retry() {
-              MAX_RETRY=2
-              n=0
-              until [ $n -ge $MAX_RETRY ]
-              do
-                  "$@" && break
-                  n=$[$n+1]
-              done
-              if [ $n -ge $MAX_RETRY ]; then
-                exit 1
-              fi
-            }
-
-            # https://github.com/facebook/jest/issues/8987 - Jest fails to run tests on CI sporadically
-            # retry introduced in https://github.com/algolia/react-instantsearch/pull/3475
-            retry yarn test --maxWorkers=4
+          command: retry yarn test --maxWorkers=4
 
   test_unit_algoliasearch_v3:
     <<: *defaults
@@ -147,25 +136,10 @@ jobs:
       - run:
           name: Type checking
           command: yarn type-check
+      - run: *add_retry_command
       - run:
           name: Unit Tests
-          command: |
-            retry() {
-              MAX_RETRY=2
-              n=0
-              until [ $n -ge $MAX_RETRY ]
-              do
-                  "$@" && break
-                  n=$[$n+1]
-              done
-              if [ $n -ge $MAX_RETRY ]; then
-                exit 1
-              fi
-            }
-
-            # https://github.com/facebook/jest/issues/8987 - Jest fails to run tests on CI sporadically
-            # retry introduced in https://github.com/algolia/react-instantsearch/pull/3475
-            retry yarn test --maxWorkers=4
+          command: retry yarn test --maxWorkers=4
 
   test_integration:
     <<: *defaults

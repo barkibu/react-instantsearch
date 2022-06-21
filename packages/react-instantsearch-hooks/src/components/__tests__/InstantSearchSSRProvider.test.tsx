@@ -430,4 +430,82 @@ describe('InstantSearchSSRProvider', () => {
       ]);
     });
   });
+
+  test('recovers the state on rerender with unstable server state', async () => {
+    const searchClient = createSearchClient({});
+
+    // @TODO: this test doesn't work in Strict Mode
+    function App() {
+      const serverState = {
+        initialResults: {
+          indexName: {
+            state: {},
+            results: [
+              {
+                exhaustiveFacetsCount: true,
+                exhaustiveNbHits: true,
+                hits: [{ objectID: '1' }, { objectID: '2' }, { objectID: '3' }],
+                hitsPerPage: 20,
+                index: 'indexName',
+                nbHits: 0,
+                nbPages: 0,
+                page: 0,
+                params: '',
+                processingTimeMS: 0,
+                query: '',
+              },
+            ],
+          },
+        },
+      };
+
+      return (
+        <InstantSearchSSRProvider {...serverState}>
+          <InstantSearch searchClient={searchClient} indexName="indexName">
+            <SearchBox />
+          </InstantSearch>
+        </InstantSearchSSRProvider>
+      );
+    }
+
+    const { rerender } = render(<App />);
+
+    await waitFor(() => {
+      expect(searchClient.search).toHaveBeenCalledTimes(0);
+    });
+
+    rerender(<App />);
+
+    userEvent.type(screen.getByRole('searchbox'), 'iphone');
+
+    await waitFor(() => {
+      expect(searchClient.search).toHaveBeenCalledTimes(6);
+      expect(searchClient.search).toHaveBeenLastCalledWith([
+        {
+          indexName: 'indexName',
+          params: expect.objectContaining({
+            query: 'iphone',
+          }),
+        },
+      ]);
+    });
+
+    rerender(<App />);
+
+    userEvent.type(screen.getByRole('searchbox'), ' case', {
+      initialSelectionStart: 6,
+    });
+
+    await waitFor(() => {
+      expect(searchClient.search).toHaveBeenCalledTimes(11);
+      expect(searchClient.search).toHaveBeenLastCalledWith([
+        {
+          indexName: 'indexName',
+          params: expect.objectContaining({
+            query: 'iphone case',
+          }),
+        },
+      ]);
+    });
+  });
 });

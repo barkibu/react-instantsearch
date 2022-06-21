@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { InstantSearchSSRContext } from '../lib/InstantSearchSSRContext';
+import { useStableValue } from '../lib/useStableValue';
 
 import type { InitialResults } from 'instantsearch.js';
 import type { ReactNode } from 'react';
@@ -22,16 +23,18 @@ export function InstantSearchSSRProvider({
   children,
   ...props
 }: InstantSearchSSRProviderProps) {
+  const serverState = useStableValue(props);
+
   // When <DynamicWidgets> is mounted, a second provider is used above the user-land
   // <InstantSearchSSRProvider> in `getServerState()`.
   // To avoid the user's provider overriding the context value with an empty object,
   // we skip this provider.
-  if (Object.keys(props).length === 0) {
+  if (Object.keys(serverState).length === 0) {
     return <>{children}</>;
   }
 
   return (
-    <InstantSearchSSRContext.Provider value={props}>
+    <InstantSearchSSRContext.Provider value={serverState}>
       {children}
     </InstantSearchSSRContext.Provider>
   );
